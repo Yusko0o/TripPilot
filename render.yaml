@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: tripilot
+    runtime: python
+    plan: free
+    buildCommand: npm ci --prefix frontend && npm run build --prefix frontend && pip install -r backend/requirements.txt
+    startCommand: gunicorn --chdir backend --workers 1 --threads 4 --timeout 120 run:app
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
