@@ -33,27 +33,60 @@ CONDITIONS = {
     99: ("Fort orage avec grêle", "Heavy thunderstorm with hail"),
 }
 
+MET_CONDITIONS = {
+    "clearsky": ("Ciel dégagé", "Clear sky"),
+    "fair": ("Peu nuageux", "Fair"),
+    "partlycloudy": ("Partiellement nuageux", "Partly cloudy"),
+    "cloudy": ("Couvert", "Cloudy"),
+    "fog": ("Brouillard", "Fog"),
+    "lightrain": ("Pluie légère", "Light rain"),
+    "rain": ("Pluie", "Rain"),
+    "heavyrain": ("Forte pluie", "Heavy rain"),
+    "lightsnow": ("Neige légère", "Light snow"),
+    "snow": ("Neige", "Snow"),
+    "heavysnow": ("Forte neige", "Heavy snow"),
+    "rainshowers": ("Averses", "Rain showers"),
+    "snowshowers": ("Averses de neige", "Snow showers"),
+    "sleet": ("Neige fondue", "Sleet"),
+    "thunderstorm": ("Orage", "Thunderstorm"),
+}
+
+
+def met_condition(symbol, language):
+    normalized = str(symbol or "cloudy").replace("_day", "").replace("_night", "")
+    normalized = normalized.replace("andthunder", "")
+    locale_index = 1 if language == "en" else 0
+    for key, labels in MET_CONDITIONS.items():
+        if key in normalized:
+            return labels[locale_index]
+    return MET_CONDITIONS["cloudy"][locale_index]
+
+
+def retry_session():
+    retry_policy = Retry(
+        total=3,
+        connect=3,
+        read=3,
+        backoff_factor=0.4,
+        status_forcelist=(429, 500, 502, 503, 504),
+        allowed_methods=frozenset({"GET"}),
+    )
+    session = requests.Session()
+    session.headers.update(
+        {
+            "Accept": "application/json",
+            "User-Agent": "TripPilot/1.2 (+https://github.com/Yusko0o/TripPilot)",
+        }
+    )
+    session.mount("https://", HTTPAdapter(max_retries=retry_policy))
+    return session
+
 
 class OpenMeteoWeatherProvider:
     endpoint = "https://api.open-meteo.com/v1/forecast"
 
     def __init__(self):
-        retry_policy = Retry(
-            total=3,
-            connect=3,
-            read=3,
-            backoff_factor=0.4,
-            status_forcelist=(429, 500, 502, 503, 504),
-            allowed_methods=frozenset({"GET"}),
-        )
-        self.session = requests.Session()
-        self.session.headers.update(
-            {
-                "Accept": "application/json",
-                "User-Agent": "TripPilot/1.1 (+https://github.com/Yusko0o/TripPilot)",
-            }
-        )
-        self.session.mount("https://", HTTPAdapter(max_retries=retry_policy))
+        self.session = retry_session()
 
     def get_weather(self, latitude, longitude, language="fr"):
         try:
@@ -103,3 +136,72 @@ class OpenMeteoWeatherProvider:
             "source": "Open-Meteo",
             "live": True,
         }
+
+
+class MetNoWeatherProvider:
+    endpoint = "https://api.met.no/weatherapi/locationforecast/2.0/compact"
+
+    def __init__(self):
+        self.session = retry_session()
+
+    def get_weather(self, latitude, longitude, language="fr"):
+        try:
+            response = self.session.get(
+                self.endpoint,
+                params={"lat": round(float(latitude), 4), "lon": round(float(longitude), 4)},
+                timeout=(5, 15),
+            )
+            response.raise_for_status()
+            timeseries = response.json()["properties"]["timeseries"]
+            current_item = timeseries[0]
+            current = current_item["data"]["instant"]["details"]
+        except (requests.RequestException, ValueError, KeyError, IndexError, TypeError) as error:
+            raise WeatherProviderError("Le fournisseur météo de secours est indisponible.") from error
+
+        summary = current_item["data"].get("next_1_hours", {}).get("summary", {})
+        symbol = summary.get("symbol_code", "cloudy")
+        daily = {}
+        for item in timeseries:
+            day = item.get("time", "")[:10]
+            details = item.get("data", {}).get("instant", {}).get("details", {})
+            temperature = details.get("air_temperature")
+            if not day or temperature is None:
+                continue
+            entry = daily.setdefault(day, {"temperatures": [], "symbol": None})
+            entry["temperatures"].append(float(temperature))
+            item_summary = item.get("data", {}).get("next_6_hours", {}).get("summary", {})
+            if item_summary.get("symbol_code"):
+                entry["symbol"] = item_summary["symbol_code"]
+
+        forecast = []
+        for day, values in list(daily.items())[:5]:
+            forecast.append(
+                {
+                    "day": datetime.fromisoformat(day).strftime("%a"),
+                    "temperature": round(max(values["temperatures"])),
+                    "condition": met_condition(values["symbol"], language),
+                }
+            )
+
+        return {
+            "temperature": round(float(current["air_temperature"])),
+            "condition": met_condition(symbol, language),
+            "humidity": round(float(current.get("relative_humidity", 0))),
+            "wind": round(float(current.get("wind_speed", 0)) * 3.6),
+            "observedAt": current_item.get("time"),
+            "forecast": forecast,
+            "source": "MET Norway",
+            "live": True,
+        }
+
+
+class FallbackWeatherProvider:
+    def __init__(self, primary=None, fallback=None):
+        self.primary = primary or OpenMeteoWeatherProvider()
+        self.fallback = fallback or MetNoWeatherProvider()
+
+    def get_weather(self, latitude, longitude, language="fr"):
+        try:
+            return self.primary.get_weather(latitude, longitude, language)
+        except WeatherProviderError:
+            return self.fallback.get_weather(latitude, longitude, language)

@@ -13,8 +13,8 @@ activities, and personal favorites.
 - Hotel and activity redirection to a booking/search page
 - Full interface in French and English
 - Dark mode remembered in the browser
-- Live current weather via Open-Meteo
-- Automatic retries and graceful fallback when the weather provider is unavailable
+- Live current weather via Open-Meteo with MET Norway as an automatic fallback
+- Automatic retries and graceful fallback when a weather provider is unavailable
 - 10 demo hotels and 5 demo activities per destination
 - Nearby airport detection using browser location permission
 - No position stored on the server

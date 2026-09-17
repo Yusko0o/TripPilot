@@ -6,11 +6,11 @@ from flask import Blueprint, jsonify, request
 from ..services.airport_provider import AirportProvider
 from ..services.demo_provider import DemoTravelProvider
 from ..services.nearest_airport import nearest_airport as find_nearest_airport
-from ..services.weather_provider import OpenMeteoWeatherProvider, WeatherProviderError
+from ..services.weather_provider import FallbackWeatherProvider, WeatherProviderError
 
 travel_bp = Blueprint("travel", __name__)
 content_provider = DemoTravelProvider()
-weather_provider = OpenMeteoWeatherProvider()
+weather_provider = FallbackWeatherProvider()
 airports = AirportProvider()
 
 AIRLINE_LINKS = (

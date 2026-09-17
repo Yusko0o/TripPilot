@@ -126,6 +126,21 @@ def test_destination_still_loads_when_weather_provider_is_down(client, monkeypat
     assert payload["dataMode"]["weather"] == "temporarily_unavailable"
 
 
+def test_weather_falls_back_to_secondary_provider():
+    from app.services.weather_provider import FallbackWeatherProvider, WeatherProviderError
+
+    class UnavailableProvider:
+        def get_weather(self, *_args, **_kwargs):
+            raise WeatherProviderError("primary unavailable")
+
+    class WorkingProvider:
+        def get_weather(self, *_args, **_kwargs):
+            return {"temperature": 18, "source": "fallback", "live": True}
+
+    provider = FallbackWeatherProvider(UnavailableProvider(), WorkingProvider())
+    assert provider.get_weather(49, 6)["source"] == "fallback"
+
+
 def test_flight_search_does_not_expose_internal_search_fields(client):
     response = client.get(
         f"/api/flights/search?origin=LUX&destination=CDG&date={FUTURE_DATE}"
