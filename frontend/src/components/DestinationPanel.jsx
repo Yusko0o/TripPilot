@@ -12,12 +12,19 @@ export default function DestinationPanel({ data, onFavorite }) {
         <p>{destination.country} · {destination.code}</p>
         <button className="glass-button" onClick={() => onFavorite(destination)}><Icon name="heart" /> {t('save')}</button>
       </div>
-      <div className="weather-card">
-        <Icon name="cloud" size={32} />
-        <strong>{weather.temperature}°</strong>
-        <span>{weather.condition}</span>
-        <small>{t('humidity')} {weather.humidity}% · {t('wind')} {weather.wind} km/h<br /><b className="live-weather">● {t('liveWeather')}</b></small>
-      </div>
+      {weather?.available !== false
+        ? <div className="weather-card">
+          <Icon name="cloud" size={32} />
+          <strong>{weather.temperature}°</strong>
+          <span>{weather.condition}</span>
+          <small>{t('humidity')} {weather.humidity}% · {t('wind')} {weather.wind} km/h<br /><b className="live-weather">● {t('liveWeather')}</b></small>
+        </div>
+        : <div className="weather-card weather-unavailable">
+          <Icon name="cloud" size={32} />
+          <strong>—°</strong>
+          <span>{t('weatherUnavailable')}</span>
+          <small>{t('weatherTryAgain')}</small>
+        </div>}
     </div>
 
     <div className="section-heading">

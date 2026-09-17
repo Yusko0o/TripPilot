@@ -81,7 +81,9 @@ def test_external_airline_search_and_destination(client):
     payload = response.get_json()
     assert payload["flights"] == []
     assert payload["dataMode"] == "external_redirect"
-    assert {item["code"] for item in payload["airlineLinks"]} == {"LG", "AF", "FR"}
+    assert {item["code"] for item in payload["airlineLinks"]} == {"GF", "LG", "AF", "FR"}
+    assert "LUX" in payload["airlineLinks"][0]["websiteUrl"]
+    assert FUTURE_DATE in payload["airlineLinks"][0]["websiteUrl"]
 
     destination = client.get("/api/destinations/CDG").get_json()
     assert destination["weather"]["live"] is True
@@ -98,6 +100,7 @@ def test_airport_autocomplete_and_city_resolution(client):
         f"/api/flights/search?origin=Luxembourg&destination=Paris&date={FUTURE_DATE}"
     )
     assert response.status_code == 200
+    assert response.get_json()["search"]["destination"]["code"] == "CDG"
     assert response.get_json()["search"]["destination"]["city"] == "Paris"
 
 
@@ -106,6 +109,31 @@ def test_english_destination_content(client):
     assert destination["destination"]["city"] == "Lisbon"
     assert destination["activities"][0]["name"].startswith("Guided tour")
     assert destination["weather"]["condition"] == "Clear sky"
+
+
+def test_destination_still_loads_when_weather_provider_is_down(client, monkeypatch):
+    from app.services.weather_provider import WeatherProviderError
+
+    def unavailable(*_args, **_kwargs):
+        raise WeatherProviderError("provider down")
+
+    monkeypatch.setattr(weather_provider, "get_weather", unavailable)
+    response = client.get("/api/destinations/CDG")
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["destination"]["city"] == "Paris"
+    assert payload["weather"]["available"] is False
+    assert payload["dataMode"]["weather"] == "temporarily_unavailable"
+
+
+def test_flight_search_does_not_expose_internal_search_fields(client):
+    response = client.get(
+        f"/api/flights/search?origin=LUX&destination=CDG&date={FUTURE_DATE}"
+    )
+    destination = response.get_json()["search"]["destination"]
+    assert set(destination) == {
+        "code", "name", "city", "country", "latitude", "longitude"
+    }
 
 
 def test_nearest_airport_uses_browser_coordinates_without_storage(client):

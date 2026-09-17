@@ -29,8 +29,9 @@ const messages = {
     footerTagline: 'Votre prochain voyage commence ici.', footerDemo: 'Prototype pédagogique — les prix et recommandations affichés sont des données de démonstration.',
     useLocation: 'Utiliser mon aéroport le plus proche', locationConsent: 'Ton navigateur va demander l’autorisation d’utiliser ta position pour calculer l’aéroport le plus proche. TripPilot ne conserve pas ta position sur le serveur.',
     allowLocation: 'Autoriser', cancel: 'Annuler', locationFound: 'Aéroport le plus proche : {code} ({distance} km)',
-    liveOffers: 'Recherche auprès des compagnies', noFlights: 'Continue sur le site officiel d’une compagnie pour voir les horaires et prix disponibles.', liveWeather: 'Météo en direct',
+    liveOffers: 'Recherche de vols', noFlights: 'Compare le trajet prérempli ou continue sur le site officiel d’une compagnie pour voir les horaires et prix disponibles.', liveWeather: 'Météo en direct',
     continueAirline: 'Voir les vols', locationUnavailable: 'La position n’est pas disponible ou l’autorisation a été refusée.',
+    weatherUnavailable: 'Météo indisponible', weatherTryAgain: 'Réessaie dans quelques instants.',
   },
   en: {
     destinations: 'Destinations', flights: 'Flights', favorites: 'Favorites', login: 'Sign in', logout: 'Sign out',
@@ -60,8 +61,9 @@ const messages = {
     footerTagline: 'Your next journey starts here.', footerDemo: 'Educational prototype — displayed prices and recommendations are demo data.',
     useLocation: 'Use my nearest airport', locationConsent: 'Your browser will ask permission to use your location to calculate the nearest airport. TripPilot does not store your location on the server.',
     allowLocation: 'Allow', cancel: 'Cancel', locationFound: 'Nearest airport: {code} ({distance} km)',
-    liveOffers: 'Search with the airlines', noFlights: 'Continue to an airline’s official website to see available schedules and prices.', liveWeather: 'Live weather',
+    liveOffers: 'Flight search', noFlights: 'Compare the pre-filled route or continue to an airline’s official website to see available schedules and prices.', liveWeather: 'Live weather',
     continueAirline: 'View flights', locationUnavailable: 'Location is unavailable or permission was denied.',
+    weatherUnavailable: 'Weather unavailable', weatherTryAgain: 'Please try again in a moment.',
   },
 }
 

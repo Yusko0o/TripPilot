@@ -7,19 +7,21 @@ activities, and personal favorites.
 
 ## MVP Features
 
-- Route search followed by redirection to Luxair, Air France, and Ryanair
+- Route search with a pre-filled Google Flights comparison and links to Luxair, Air France, and Ryanair
 - Autocomplete across nearly 7,900 airports by code, city, or name
 - Flight redirection to the airline's official website
 - Hotel and activity redirection to a booking/search page
 - Full interface in French and English
 - Dark mode remembered in the browser
 - Live current weather via Open-Meteo
+- Automatic retries and graceful fallback when the weather provider is unavailable
 - 10 demo hotels and 5 demo activities per destination
 - Nearby airport detection using browser location permission
 - No position stored on the server
 - Separate sign-up and login pages, secured by session
 - Flight and destination favorites
 - No API key required for flights, weather, or location
+- Departure date automatically initialized to a valid future date
 - CSRF protection, input validation, `scrypt` hashing, secure cookies,
   and parameterized SQL queries via SQLAlchemy
 

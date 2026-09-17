@@ -24,6 +24,33 @@ METRO_ALIASES = {
     "sto": "stockholm",
 }
 
+CITY_DEFAULTS = {
+    "amsterdam": "AMS",
+    "barcelona": "BCN",
+    "beijing": "PEK",
+    "berlin": "BER",
+    "brussels": "BRU",
+    "dubai": "DXB",
+    "frankfurt": "FRA",
+    "lisbon": "LIS",
+    "london": "LHR",
+    "los angeles": "LAX",
+    "luxembourg": "LUX",
+    "madrid": "MAD",
+    "milan": "MXP",
+    "new york": "JFK",
+    "nice": "NCE",
+    "paris": "CDG",
+    "rome": "FCO",
+    "san francisco": "SFO",
+    "seoul": "ICN",
+    "singapore": "SIN",
+    "stockholm": "ARN",
+    "sydney": "SYD",
+    "tokyo": "HND",
+    "washington": "IAD",
+}
+
 
 def normalize(value):
     value = unicodedata.normalize("NFKD", str(value or ""))
@@ -55,6 +82,15 @@ def airport_index():
 
 
 class AirportProvider:
+    @staticmethod
+    def public(item):
+        if item is None:
+            return None
+        return {
+            key: item.get(key)
+            for key in ("code", "name", "city", "country", "latitude", "longitude")
+        }
+
     def search(self, query, limit=8):
         raw_query = normalize(query)[:80]
         if len(raw_query) < 2:
@@ -62,30 +98,30 @@ class AirportProvider:
         expanded_query = METRO_ALIASES.get(raw_query, raw_query)
         query_code = raw_query.upper()
         matches = []
+        preferred_code = CITY_DEFAULTS.get(expanded_query)
 
         for item in airport_index():
             code = item["code"]
             if code == query_code:
                 score = 0
-            elif code.startswith(query_code):
+            elif code == preferred_code:
                 score = 1
-            elif item["city_search"] == expanded_query:
+            elif code.startswith(query_code):
                 score = 2
-            elif item["city_search"].startswith(expanded_query):
+            elif item["city_search"] == expanded_query:
                 score = 3
-            elif item["name_search"].startswith(expanded_query):
+            elif item["city_search"].startswith(expanded_query):
                 score = 4
-            elif expanded_query in item["search"]:
+            elif item["name_search"].startswith(expanded_query):
                 score = 5
+            elif expanded_query in item["search"]:
+                score = 6
             else:
                 continue
             matches.append((score, len(item["name"]), item))
 
         matches.sort(key=lambda match: (match[0], match[1], match[2]["code"]))
-        return [
-            {key: value for key, value in item.items() if not key.endswith("search")}
-            for _score, _length, item in matches[:limit]
-        ]
+        return [self.public(item) for _score, _length, item in matches[:limit]]
 
     def resolve(self, value):
         value = str(value or "").strip()
@@ -97,4 +133,3 @@ class AirportProvider:
                 return item
         results = self.search(value, limit=1)
         return results[0] if results else None
-

@@ -10,6 +10,13 @@ import { Icon } from './components/Icons'
 import PopularDestination from './components/PopularDestination'
 import { useSettings } from './settings'
 
+function localDate(offsetDays = 0) {
+  const value = new Date()
+  value.setDate(value.getDate() + offsetDays)
+  const timezoneOffset = value.getTimezoneOffset() * 60_000
+  return new Date(value.getTime() - timezoneOffset).toISOString().slice(0, 10)
+}
+
 const popular = [
   {
     code: 'CDG',
@@ -63,7 +70,7 @@ function Header({ user, onLogout }) {
 function HomePage({ user, showNotice }) {
   const navigate = useNavigate()
   const { language, t } = useSettings()
-  const [form, setForm] = useState({ origin: 'LUX', destination: 'CDG', date: '2026-08-01', passengers: 1 })
+  const [form, setForm] = useState({ origin: 'LUX', destination: 'CDG', date: localDate(7), passengers: 1 })
   const [airlineLinks, setAirlineLinks] = useState([])
   const [destination, setDestination] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -165,7 +172,7 @@ function HomePage({ user, showNotice }) {
           <AirportAutocomplete label={t('departure')} icon="plane" value={form.origin} onChange={(origin) => setForm({ ...form, origin })} />
           <button type="button" className="swap" onClick={() => setForm({ ...form, origin: form.destination, destination: form.origin })}>⇄</button>
           <AirportAutocomplete label={t('destination')} value={form.destination} onChange={(destination) => setForm({ ...form, destination })} />
-          <label><span>{t('departureDate')}</span><input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} required /></label>
+          <label><span>{t('departureDate')}</span><input type="date" min={localDate()} value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} required /></label>
           <label><span>{t('travelers')}</span><select value={form.passengers} onChange={(event) => setForm({ ...form, passengers: event.target.value })}><option value="1">{t('traveler1')}</option><option value="2">{t('travelerN', { count: 2 })}</option><option value="3">{t('travelerN', { count: 3 })}</option><option value="4">{t('travelerN', { count: 4 })}</option></select></label>
           <button className="search-button" disabled={loading}><Icon name="search" /> {loading ? t('searching') : t('search')}</button>
         </form>

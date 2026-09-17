@@ -1,4 +1,5 @@
 from datetime import date
+from urllib.parse import quote_plus
 
 from flask import Blueprint, jsonify, request
 
@@ -74,10 +75,29 @@ def search_flights():
         }
         for airline in AIRLINE_LINKS
     ]
+    google_query = quote_plus(
+        f"Flights from {origin['code']} to {destination['code']} "
+        f"on {departure_date} for {adults} adult{'s' if adults > 1 else ''}"
+    )
+    links.insert(
+        0,
+        {
+            "provider": "Google Flights",
+            "code": "GF",
+            "websiteUrl": f"https://www.google.com/travel/flights?q={google_query}",
+            "origin": origin["code"],
+            "destination": destination["code"],
+            "departureDate": departure_date,
+            "adults": adults,
+        },
+    )
     return {
         "flights": [],
         "airlineLinks": links,
-        "search": {"origin": origin, "destination": destination},
+        "search": {
+            "origin": airports.public(origin),
+            "destination": airports.public(destination),
+        },
         "dataMode": "external_redirect",
     }
 
@@ -99,9 +119,14 @@ def destination_details(code):
         details["weather"] = weather_provider.get_weather(
             airport["latitude"], airport["longitude"], language
         )
-    except WeatherProviderError as error:
-        return jsonify({"error": str(error), "code": "WEATHER_PROVIDER_ERROR"}), 502
-    details["dataMode"]["weather"] = "live"
+        details["dataMode"]["weather"] = "live"
+    except WeatherProviderError:
+        details["weather"] = {
+            "available": False,
+            "live": False,
+            "source": "Open-Meteo",
+        }
+        details["dataMode"]["weather"] = "temporarily_unavailable"
     return details
 
 

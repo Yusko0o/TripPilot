@@ -1,6 +1,8 @@
 from datetime import datetime
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 
 class WeatherProviderError(RuntimeError):
@@ -35,9 +37,27 @@ CONDITIONS = {
 class OpenMeteoWeatherProvider:
     endpoint = "https://api.open-meteo.com/v1/forecast"
 
+    def __init__(self):
+        retry_policy = Retry(
+            total=3,
+            connect=3,
+            read=3,
+            backoff_factor=0.4,
+            status_forcelist=(429, 500, 502, 503, 504),
+            allowed_methods=frozenset({"GET"}),
+        )
+        self.session = requests.Session()
+        self.session.headers.update(
+            {
+                "Accept": "application/json",
+                "User-Agent": "TripPilot/1.1 (+https://github.com/Yusko0o/TripPilot)",
+            }
+        )
+        self.session.mount("https://", HTTPAdapter(max_retries=retry_policy))
+
     def get_weather(self, latitude, longitude, language="fr"):
         try:
-            response = requests.get(
+            response = self.session.get(
                 self.endpoint,
                 params={
                     "latitude": latitude,
@@ -47,7 +67,7 @@ class OpenMeteoWeatherProvider:
                     "forecast_days": 7,
                     "timezone": "auto",
                 },
-                timeout=12,
+                timeout=(5, 15),
             )
             response.raise_for_status()
             payload = response.json()
@@ -56,6 +76,8 @@ class OpenMeteoWeatherProvider:
 
         current = payload.get("current") or {}
         daily = payload.get("daily") or {}
+        if current.get("temperature_2m") is None or current.get("weather_code") is None:
+            raise WeatherProviderError("La météo en temps réel a renvoyé une réponse incomplète.")
         locale_index = 1 if language == "en" else 0
         code = int(current.get("weather_code", 0))
         dates = daily.get("time", [])
@@ -81,4 +103,3 @@ class OpenMeteoWeatherProvider:
             "source": "Open-Meteo",
             "live": True,
         }
-
